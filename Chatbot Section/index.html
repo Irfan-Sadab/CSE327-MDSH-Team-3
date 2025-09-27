@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kettle & Animals Chatbot</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>?? Kettle & Animals Expert</h1>
+            <p>Ask me anything about kettles and animals!</p>
+        </header>
+        
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot-message">
+                    <div class="message-content">
+                        Hello! I'm your Kettle & Animals expert. Ask me questions about kettles, tea, brewing, or animals! 
+                        You can also send me images or use voice input.
+                    </div>
+                    <div class="timestamp">Just now</div>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <div class="input-controls">
+                    <button id="voiceButton" class="control-button" title="Voice Input">
+                        ??
+                    </button>
+                    <button id="imageButton" class="control-button" title="Upload Image">
+                        ??
+                    </button>
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                </div>
+                
+                <input type="text" id="userInput" placeholder="Ask about kettles or animals..." autocomplete="off">
+                
+                <div class="send-controls">
+                    <button id="sendButton">Send</button>
+                </div>
+            </div>
+            
+            <!-- Image preview container -->
+            <div id="imagePreviewContainer" style="padding: 0 20px 10px 20px; display: none;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img id="imagePreview" src="" alt="Preview" style="max-width: 100px; max-height: 100px; border-radius: 8px;">
+                    <button id="removeImage" style="background: #ff4444; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer;">×</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
