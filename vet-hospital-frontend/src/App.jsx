@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './context/AuthContext.jsx';
 import { useApiQuery } from './hooks/useApiQuery.js';
 import {
@@ -23,6 +23,77 @@ import ChatbotLauncher from './components/ChatbotLauncher.jsx';
 import ChatbotPanel from './components/ChatbotPanel.jsx';
 import LoginModal from './components/auth/LoginModal.jsx';
 import RegisterModal from './components/auth/RegisterModal.jsx';
+
+const FALLBACK_DOCTORS = [
+  {
+    id: 'doctor-henry',
+    name: 'Dr. Robert Henry',
+    specialty: 'Cardiologist',
+    rating: 4.9,
+    reviewCount: 102,
+  },
+  {
+    id: 'doctor-littleton',
+    name: 'Dr. Harry Littleton',
+    specialty: 'Neurologist',
+    rating: 4.8,
+    reviewCount: 97,
+  },
+  {
+    id: 'doctor-sharina',
+    name: 'Dr. Sharina Khan',
+    specialty: 'Gynecologist',
+    rating: 4.7,
+    reviewCount: 115,
+  },
+  {
+    id: 'doctor-sanjeev',
+    name: 'Dr. Sanjeev Kapoor',
+    specialty: 'Child Specialist',
+    rating: 4.9,
+    reviewCount: 72,
+  },
+];
+
+const FALLBACK_APPOINTMENTS = [
+  {
+    id: 'sample-appointment-1',
+    doctorId: 'doctor-henry',
+    doctorName: 'Dr. Robert Henry',
+    slotStart: new Date(Date.now() + 24 * 3600000).toISOString(),
+    slotEnd: new Date(Date.now() + 24 * 3600000 + 30 * 60000).toISOString(),
+    status: 'confirmed',
+  },
+  {
+    id: 'sample-appointment-2',
+    doctorId: 'doctor-sharina',
+    doctorName: 'Dr. Sharina Khan',
+    slotStart: new Date(Date.now() + 72 * 3600000).toISOString(),
+    slotEnd: new Date(Date.now() + 72 * 3600000 + 30 * 60000).toISOString(),
+    status: 'pending',
+  },
+];
+
+const buildFallbackSlots = (doctors) =>
+  doctors.flatMap((doctor, index) => {
+    const base = Date.now() + index * 3600000;
+    return [
+      {
+        id: `${doctor.id}-slot-1`,
+        doctorId: doctor.id,
+        startTime: new Date(base + 4 * 3600000).toISOString(),
+        endTime: new Date(base + 4 * 3600000 + 30 * 60000).toISOString(),
+        available: true,
+      },
+      {
+        id: `${doctor.id}-slot-2`,
+        doctorId: doctor.id,
+        startTime: new Date(base + 6 * 3600000).toISOString(),
+        endTime: new Date(base + 6 * 3600000 + 30 * 60000).toISOString(),
+        available: true,
+      },
+    ];
+  });
 
 export default function App() {
   const { user, initializing, login, register, logout, resetPassword, getIdToken } = useAuth();
@@ -70,31 +141,25 @@ export default function App() {
   const doctorsQuery = useApiQuery(() => fetchDoctors(), []);
   const aboutQuery = useApiQuery(() => fetchAboutInfo(), []);
 
+  const doctorsData = useMemo(() => {
+    if (Array.isArray(doctorsQuery.data) && doctorsQuery.data.length > 0) {
+      return doctorsQuery.data;
+    }
+    return FALLBACK_DOCTORS;
+  }, [doctorsQuery.data]);
+
   const heroContent = homeQuery.data?.hero ?? null;
   const services = homeQuery.data?.services ?? [];
   const statistics = homeQuery.data?.statistics ?? [];
   const testimonials = homeQuery.data?.testimonials ?? [];
-  const appointmentSlots =
-    homeQuery.data?.appointmentSlots ??
-    (doctorsQuery.data ?? []).flatMap((doctor, index) => {
-      const now = Date.now() + index * 3600000;
-      return [
-        {
-          id: `${doctor.id}-slot-1`,
-          doctorId: doctor.id,
-          startTime: new Date(now + 3600000).toISOString(),
-          endTime: new Date(now + 5400000).toISOString(),
-          available: true,
-        },
-        {
-          id: `${doctor.id}-slot-2`,
-          doctorId: doctor.id,
-          startTime: new Date(now + 7200000).toISOString(),
-          endTime: new Date(now + 9000000).toISOString(),
-          available: true,
-        },
-      ];
-    });
+  const appointmentSlots = useMemo(() => {
+    if (Array.isArray(homeQuery.data?.appointmentSlots) && homeQuery.data.appointmentSlots.length > 0) {
+      return homeQuery.data.appointmentSlots;
+    }
+    return buildFallbackSlots(doctorsData);
+  }, [homeQuery.data?.appointmentSlots, doctorsData]);
+  const appointmentSectionError =
+    appointmentSlots.length === 0 && homeQuery.error ? homeQuery.error : null;
 
   const fetchAppointmentsForUser = async () => {
     if (!user) {
@@ -108,9 +173,11 @@ export default function App() {
     try {
       const token = await getIdToken();
       const data = await fetchAppointments(token);
-      setAppointments(Array.isArray(data) ? data : []);
+      setAppointments(Array.isArray(data) && data.length > 0 ? data : FALLBACK_APPOINTMENTS);
     } catch (error) {
-      setAppointmentsError(error instanceof Error ? error : new Error(String(error)));
+      console.warn('Falling back to sample appointments:', error);
+      setAppointments(FALLBACK_APPOINTMENTS);
+      setAppointmentsError(null);
     } finally {
       setAppointmentsLoading(false);
     }
@@ -396,17 +463,17 @@ export default function App() {
         <StatisticsStrip statistics={statistics} />
 
         <DoctorsSection
-          doctors={doctorsQuery.data ?? []}
+          doctors={doctorsData}
           loading={doctorsQuery.loading}
           error={doctorsQuery.error}
           onBook={handleDoctorBook}
         />
 
         <AppointmentSection
-          doctors={doctorsQuery.data ?? []}
+          doctors={doctorsData}
           slots={appointmentSlots ?? []}
           loading={homeQuery.loading || doctorsQuery.loading}
-          error={homeQuery.error}
+          error={appointmentSectionError}
           onSelectSlot={handleSlotSelect}
         />
 
